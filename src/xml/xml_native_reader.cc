@@ -890,7 +890,8 @@ const mjMap fdof_map[mjNFCOMPDOFS] = {
   {"full",          mjFCOMPDOF_FULL},
   {"radial",        mjFCOMPDOF_RADIAL},
   {"trilinear",     mjFCOMPDOF_TRILINEAR},
-  {"quadratic",     mjFCOMPDOF_QUADRATIC}
+  {"quadratic",     mjFCOMPDOF_QUADRATIC},
+  {"radialplanar", mjFCOMPDOF_RADIALPLANAR}
 };
 
 

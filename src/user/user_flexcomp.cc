@@ -119,7 +119,9 @@ bool mjCFlexcomp::Make(mjsBody* body, char* error, int error_sz) {
 
   // check counts
   for (int i=0; i < 3; i++) {
-    if (count[i] < 1 || ((doftype == mjFCOMPDOF_RADIAL && count[i] < 2) && dflex->dim == 3)) {
+      // TODO make sure count check is valid for mjCOMPDOFRADIALPLANAR
+    if (count[i] < 1 || ((doftype == mjFCOMPDOF_RADIAL && count[i] < 2) && dflex->dim == 3)
+               || ((doftype == mjFCOMPDOF_RADIALPLANAR && count[i] < 2) && dflex->dim == 3)) {
       return comperr(error, "Count too small", error_sz);
     }
   }
@@ -488,6 +490,27 @@ bool mjCFlexcomp::Make(mjsBody* body, char* error, int error_sz) {
         mjuu_setvec(jnt->pos, 0, 0, 0);
         mjuu_copyvec(jnt->axis, pb->pos, 3);
         mjuu_normvec(jnt->axis, 3);
+      }
+
+      // add radialplanar sliders
+      else if (doftype == mjFCOMPDOF_RADIALPLANAR) {
+          //float p_x = pb->pos[0]; float p_y = pb->pos[1]; float p_z = pb->pos[2];
+
+          mjsJoint* jnt_0 = mjs_addJoint(pb, 0);
+          
+          // set properties
+          jnt_0->type = mjJNT_SLIDE;
+          mjuu_setvec(jnt_0->pos, 0, 0, 0);
+          mjuu_copyvec(jnt_0->axis, pb->pos, 3);
+          jnt_0->axis[2] = 0;
+          mjuu_normvec(jnt_0->axis, 3);
+
+          mjsJoint* jnt_1 = mjs_addJoint(pb, 0);
+
+          // set properties
+          jnt_1->type = mjJNT_SLIDE;
+          mjuu_setvec(jnt_1->pos, 0, 0, 0);
+          mjuu_setvec(jnt_1->axis, 0, 0, 1);
       }
 
       // add three orthogonal sliders
