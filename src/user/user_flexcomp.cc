@@ -444,7 +444,7 @@ bool mjCFlexcomp::Make(mjsBody* body, char* error, int error_sz) {
     }
 
     // pinned or trilinear or quadratic: parent body
-    if (pinned[i] || doftype == mjFCOMPDOF_TRILINEAR || doftype == mjFCOMPDOF_QUADRATIC) {
+    if (doftype == mjFCOMPDOF_TRILINEAR || doftype == mjFCOMPDOF_QUADRATIC) {
       mjs_appendString(pf->vertbody, mjs_getName(body->element)->c_str());
 
       // add plugin
@@ -459,73 +459,75 @@ bool mjCFlexcomp::Make(mjsBody* body, char* error, int error_sz) {
 
     // not pinned and not trilinear: new body
     else {
-      // add new body at vertex coordinates
-      mjsBody* pb = mjs_addBody(body, 0);
+        // add new body at vertex coordinates
+        mjsBody* pb = mjs_addBody(body, 0);
 
-      // add geom if vertcollide
-      if (dflex->vertcollide) {
-        mjsGeom* geom = mjs_addGeom(pb, 0);
-        geom->type = mjGEOM_SPHERE;
-        geom->size[0] = dflex->radius;
-        geom->group = 4;
-      }
-
-      // set frame and inertial
-      pb->pos[0] = point[3*i];
-      pb->pos[1] = point[3*i+1];
-      pb->pos[2] = point[3*i+2];
-      mjuu_zerovec(pb->ipos, 3);
-      pb->mass = bodymass;
-      pb->inertia[0] = bodyinertia;
-      pb->inertia[1] = bodyinertia;
-      pb->inertia[2] = bodyinertia;
-      pb->explicitinertial = true;
-
-      // add radial slider
-      if (doftype == mjFCOMPDOF_RADIAL) {
-        mjsJoint* jnt = mjs_addJoint(pb, 0);
-
-        // set properties
-        jnt->type = mjJNT_SLIDE;
-        mjuu_setvec(jnt->pos, 0, 0, 0);
-        mjuu_copyvec(jnt->axis, pb->pos, 3);
-        mjuu_normvec(jnt->axis, 3);
-      }
-
-      // add radialplanar sliders
-      else if (doftype == mjFCOMPDOF_RADIALPLANAR) {
-          //float p_x = pb->pos[0]; float p_y = pb->pos[1]; float p_z = pb->pos[2];
-
-          mjsJoint* jnt_0 = mjs_addJoint(pb, 0);
-          
-          // set properties
-          jnt_0->type = mjJNT_SLIDE;
-          mjuu_setvec(jnt_0->pos, 0, 0, 0);
-          mjuu_copyvec(jnt_0->axis, pb->pos, 3);
-          jnt_0->axis[2] = 0;
-          mjuu_normvec(jnt_0->axis, 3);
-
-          mjsJoint* jnt_1 = mjs_addJoint(pb, 0);
-
-          // set properties
-          jnt_1->type = mjJNT_SLIDE;
-          mjuu_setvec(jnt_1->pos, 0, 0, 0);
-          mjuu_setvec(jnt_1->axis, 0, 0, 1);
-      }
-
-      // add three orthogonal sliders
-      else if (doftype == mjFCOMPDOF_FULL) {
-        for (int j=0; j < 3; j++) {
-          // add joint to body
-          mjsJoint* jnt = mjs_addJoint(pb, 0);
-
-          // set properties
-          jnt->type = mjJNT_SLIDE;
-          mjuu_setvec(jnt->pos, 0, 0, 0);
-          mjuu_setvec(jnt->axis, 0, 0, 0);
-          jnt->axis[j] = 1;
+        // add geom if vertcollide
+        if (dflex->vertcollide) {
+            mjsGeom* geom = mjs_addGeom(pb, 0);
+            geom->type = mjGEOM_SPHERE;
+            geom->size[0] = dflex->radius;
+            geom->group = 4;
         }
-      }
+
+        // set frame and inertial
+        pb->pos[0] = point[3 * i];
+        pb->pos[1] = point[3 * i + 1];
+        pb->pos[2] = point[3 * i + 2];
+        mjuu_zerovec(pb->ipos, 3);
+        pb->mass = bodymass;
+        pb->inertia[0] = bodyinertia;
+        pb->inertia[1] = bodyinertia;
+        pb->inertia[2] = bodyinertia;
+        pb->explicitinertial = true;
+
+        if (!pinned[i]) {
+            // add radial slider
+            if (doftype == mjFCOMPDOF_RADIAL) {
+                mjsJoint* jnt = mjs_addJoint(pb, 0);
+
+                // set properties
+                jnt->type = mjJNT_SLIDE;
+                mjuu_setvec(jnt->pos, 0, 0, 0);
+                mjuu_copyvec(jnt->axis, pb->pos, 3);
+                mjuu_normvec(jnt->axis, 3);
+            }
+
+            // add radialplanar sliders
+            else if (doftype == mjFCOMPDOF_RADIALPLANAR) {
+                //float p_x = pb->pos[0]; float p_y = pb->pos[1]; float p_z = pb->pos[2];
+
+                mjsJoint* jnt_0 = mjs_addJoint(pb, 0);
+
+                // set properties
+                jnt_0->type = mjJNT_SLIDE;
+                mjuu_setvec(jnt_0->pos, 0, 0, 0);
+                mjuu_copyvec(jnt_0->axis, pb->pos, 3);
+                jnt_0->axis[2] = 0;
+                mjuu_normvec(jnt_0->axis, 3);
+
+                mjsJoint* jnt_1 = mjs_addJoint(pb, 0);
+
+                // set properties
+                jnt_1->type = mjJNT_SLIDE;
+                mjuu_setvec(jnt_1->pos, 0, 0, 0);
+                mjuu_setvec(jnt_1->axis, 0, 0, 1);
+            }
+
+          // add three orthogonal sliders
+          else if (doftype == mjFCOMPDOF_FULL) {
+            for (int j=0; j < 3; j++) {
+              // add joint to body
+              mjsJoint* jnt = mjs_addJoint(pb, 0);
+
+              // set properties
+              jnt->type = mjJNT_SLIDE;
+              mjuu_setvec(jnt->pos, 0, 0, 0);
+              mjuu_setvec(jnt->axis, 0, 0, 0);
+              jnt->axis[j] = 1;
+            }
+          }
+        }
 
       // construct body name, add to vertbody
       char txt[100];
