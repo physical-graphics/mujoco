@@ -3037,6 +3037,7 @@ mjCSkin::mjCSkin(mjCModel* _model) {
 
   // in case this camera is not compiled
   CopyFromSpec();
+  //Compile();
 }
 
 
@@ -3087,17 +3088,23 @@ void mjCSkin::PointToLocal() {
 
 
 void mjCSkin::NameSpace(const mjCModel* m) {
+  printf("mjCSkin::NameSpace called on '%s' with prefix '%s' and suffix '%s'... ", name.c_str(), m->prefix.c_str(), m->suffix.c_str());
+  //model->prefix = m->prefix; model->suffix = m->suffix; //This is too low_level, last prefix applied is used for all calls from Compile() after LoadSKN()
+  mjCBase::NameSpace(m);
   // use filename if name is missing
   if (name.empty()) {
     std::string stripped = mjuu_strippath(spec_file_);
     name = mjuu_stripext(stripped);
   }
   for (auto& name : spec_bodyname_) {
+    printf("\nspec_bodyname %s ", name.c_str());
     name = m->prefix + name + m->suffix;
-  }
+    printf("updated to %s... ", name.c_str());
+  }  
   if (modelfiledir_.empty()) {
     modelfiledir_ = FilePath(m->spec_modelfiledir_);
   }
+  printf("mjCSkin::NameSpace exited\n");
 }
 
 
@@ -3114,11 +3121,60 @@ void mjCSkin::CopyFromSpec() {
   bindquat_ = spec_bindquat_;
   vertid_ = spec_vertid_;
   vertweight_ = spec_vertweight_;
-
+  
   // use filename if name is missing
   if (name.empty()) {
     std::string stripped = mjuu_strippath(file_);
     name = mjuu_stripext(stripped);
+  }
+  // load file
+  if (!file_.empty()) {
+      // make sure data is not present
+      if (!spec_vert_.empty() ||
+          !spec_texcoord_.empty() ||
+          !spec_face_.empty() ||
+          !spec_bodyname_.empty() ||
+          !spec_bindpos_.empty() ||
+          !spec_bindquat_.empty() ||
+          !spec_vertid_.empty() ||
+          !spec_vertweight_.empty()) {
+          throw mjCError(this, "Both skin data and file were specified: %s", file_.c_str());
+      }
+
+      // remove path from file if necessary
+      if (model->strippath) {
+          file_ = mjuu_strippath(file_);
+      }
+
+      // load SKN
+      std::string ext = mjuu_getext(file_);
+      if (strcasecmp(ext.c_str(), ".skn")) {
+          throw mjCError(this, "Unknown skin file type: %s", file_.c_str());
+      }
+
+      // copy paths from model if not already defined
+      if (modelfiledir_.empty()) {
+          modelfiledir_ = FilePath(model->modelfiledir_);
+      }
+      printf("\nMESHDIR: %s", this->model->meshdir_.c_str());
+      mjResource* resource = nullptr;
+      printf("\nFILE: %s", file_.c_str());
+      try {
+          const std::string filename = mjuu_combinePaths(this->model->meshdir_.c_str(), file->c_str());
+          resource = mjCBase::LoadResource(mjs_getString(model->spec.modelfiledir),
+              filename, 0);
+      }
+      catch (mjCError err) {
+          printf("TEMP ERROR : % s", err.message);
+      }
+      try {
+          LoadSKN(resource);
+          mju_closeResource(resource);
+      }
+      catch (mjCError err) {
+          mju_closeResource(resource);
+          throw err;
+      }
   }
 }
 
@@ -3144,6 +3200,11 @@ mjCSkin::~mjCSkin() {
 void mjCSkin::ResolveReferences(const mjCModel* m) {
   size_t nbone = bodyname_.size();
   bodyid.resize(nbone);
+  for (auto& name : bodyname_) {
+      printf("bodyname %s ", name.c_str());
+      name = m->prefix + name + m->suffix;
+      printf("updated to %s... ", name.c_str());
+  }
   for (int i=0; i < nbone; i++) {
     mjCBase* pbody = m->FindObject(mjOBJ_BODY, bodyname_[i]);
     if (!pbody) {
@@ -3153,55 +3214,9 @@ void mjCSkin::ResolveReferences(const mjCModel* m) {
   }
 }
 
-
-
 // compiler
 void mjCSkin::Compile(const mjVFS* vfs) {
   CopyFromSpec();
-
-  // load file
-  if (!file_.empty()) {
-    // make sure data is not present
-    if (!spec_vert_.empty() ||
-        !spec_texcoord_.empty() ||
-        !spec_face_.empty() ||
-        !spec_bodyname_.empty() ||
-        !spec_bindpos_.empty() ||
-        !spec_bindquat_.empty() ||
-        !spec_vertid_.empty() ||
-        !spec_vertweight_.empty()) {
-      throw mjCError(this, "Both skin data and file were specified: %s", file_.c_str());
-    }
-
-    // remove path from file if necessary
-    if (model->strippath) {
-      file_ = mjuu_strippath(file_);
-    }
-
-    // load SKN
-    std::string ext = mjuu_getext(file_);
-    if (strcasecmp(ext.c_str(), ".skn")) {
-      throw mjCError(this, "Unknown skin file type: %s", file_.c_str());
-    }
-
-    // copy paths from model if not already defined
-    if (modelfiledir_.empty()) {
-      modelfiledir_ = FilePath(model->modelfiledir_);
-    }
-    mujoco::user::FilePath meshdir_;
-    meshdir_ = FilePath(mjs_getString(compiler->meshdir));
-
-    FilePath filename = meshdir_ + FilePath(file_);
-    mjResource* resource = LoadResource(modelfiledir_.Str(), filename.Str(), vfs);
-
-    try {
-      LoadSKN(resource);
-      mju_closeResource(resource);
-    } catch(mjCError err) {
-      mju_closeResource(resource);
-      throw err;
-    }
-  }
 
   // make sure all data is present
   if (vert_.empty() ||
@@ -3213,6 +3228,14 @@ void mjCSkin::Compile(const mjVFS* vfs) {
       vertweight_.empty()) {
     throw mjCError(this, "Missing data in skin");
   }
+  //printf("REFCOUNT: %s", this->bo);
+  //printf("PARENT MODEL PREFIX: %s", this->GetParent()->model->prefix.c_str());
+  //NameSpace(model); //doesn't have access to the contextual prefix and suffix of the model* passed to NameSpace() from CopyList()
+  //for (auto& name : bodyname_) {
+  //    //name = this->model->prefix + name + this->model->suffix; //prefix and suffix are empty here
+  //    printf("SKN bodyname is %s... ", name.c_str());
+  //}
+  
 
   // check mesh sizes
   if (vert_.size()%3) {
@@ -3308,9 +3331,6 @@ void mjCSkin::Compile(const mjVFS* vfs) {
     bindquat_[4*i+3] = (float) quat[3];
   }
 }
-
-
-
 // load skin in SKN BIN format
 void mjCSkin::LoadSKN(mjResource* resource) {
   char* buffer = 0;
@@ -4030,13 +4050,17 @@ void mjCFlex::PointToLocal() {
 
 
 void mjCFlex::NameSpace(const mjCModel* m) {
+  printf("mjCFlex::NameSpace called on '%s' with prefix '%s' and suffix '%s'... ", name.c_str(), m->prefix.c_str(), m->suffix.c_str());
   mjCBase::NameSpace(m);
   for (auto& name : spec_vertbody_) {
     name = m->prefix + name + m->suffix;
+    //printf("name is %s... ", name.c_str());
   }
   for (auto& name : spec_nodebody_) {
     name = m->prefix + name + m->suffix;
+    //printf("name is %s... ", name.c_str());
   }
+  printf("mjCFlex::NameSpace exited\n");
 }
 
 
