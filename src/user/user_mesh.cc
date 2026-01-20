@@ -3088,7 +3088,7 @@ void mjCSkin::PointToLocal() {
 
 
 void mjCSkin::NameSpace(const mjCModel* m) {
-  printf("mjCSkin::NameSpace called on '%s' with prefix '%s' and suffix '%s'... ", name.c_str(), m->prefix.c_str(), m->suffix.c_str());
+  printf("\nmjCSkin::NameSpace called on '%s' with prefix '%s' and suffix '%s'... ", name.c_str(), m->prefix.c_str(), m->suffix.c_str());
   //model->prefix = m->prefix; model->suffix = m->suffix; //This is too low_level, last prefix applied is used for all calls from Compile() after LoadSKN()
   mjCBase::NameSpace(m);
   // use filename if name is missing
@@ -3132,7 +3132,7 @@ void mjCSkin::CopyFromSpec() {
         std::string stripped = mjuu_strippath(file_);
         name = mjuu_stripext(stripped);
     }
-}
+  }
 
 void mjCSkin::PrepareSKN() {
   // load file
@@ -3225,6 +3225,7 @@ void mjCSkin::ResolveReferences(const mjCModel* m) {
 // compiler
 void mjCSkin::Compile(const mjVFS* vfs) {
   CopyFromSpec();
+  PrepareSKN();
 
   // make sure all data is present
   if (vert_.empty() ||
