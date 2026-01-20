@@ -1351,7 +1351,7 @@ class mjCSkin: public mjCSkin_, private mjsSkin {
   void NameSpace(const mjCModel* m);
   void Compile(const mjVFS* vfs);             // compiler
   void LoadSKN(mjResource* resource);         // load skin in SKN BIN format
-  void LoadSKN();         // load skin in SKN BIN format
+  void PrepareSKN();         // load skin in SKN BIN format
 };
 
 

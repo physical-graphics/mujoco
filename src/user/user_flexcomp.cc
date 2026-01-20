@@ -1219,7 +1219,7 @@ static int findstring(const char* buffer, int buffer_sz, const char* str) {
     // string found
     if (found) {
       return i;
-    }
+    } 
   }
 
   // not found

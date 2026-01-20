@@ -3037,7 +3037,7 @@ mjCSkin::mjCSkin(mjCModel* _model) {
 
   // in case this camera is not compiled
   CopyFromSpec();
-  //Compile();
+  PrepareSKN();
 }
 
 
@@ -3100,7 +3100,12 @@ void mjCSkin::NameSpace(const mjCModel* m) {
     printf("\nspec_bodyname %s ", name.c_str());
     name = m->prefix + name + m->suffix;
     printf("updated to %s... ", name.c_str());
-  }  
+  }
+  for (auto& name : bodyname_) {
+      printf("\nbodyname %s ", name.c_str());
+      name = m->prefix + name + m->suffix;
+      printf("updated to %s... ", name.c_str());
+  }
   if (modelfiledir_.empty()) {
     modelfiledir_ = FilePath(m->spec_modelfiledir_);
   }
@@ -3110,23 +3115,26 @@ void mjCSkin::NameSpace(const mjCModel* m) {
 
 
 void mjCSkin::CopyFromSpec() {
-  *static_cast<mjsSkin*>(this) = spec;
-  file_ = spec_file_;
-  material_ = spec_material_;
-  vert_ = spec_vert_;
-  texcoord_ = spec_texcoord_;
-  face_ = spec_face_;
-  bodyname_ = spec_bodyname_;
-  bindpos_ = spec_bindpos_;
-  bindquat_ = spec_bindquat_;
-  vertid_ = spec_vertid_;
-  vertweight_ = spec_vertweight_;
-  
-  // use filename if name is missing
-  if (name.empty()) {
-    std::string stripped = mjuu_strippath(file_);
-    name = mjuu_stripext(stripped);
-  }
+    *static_cast<mjsSkin*>(this) = spec;
+    file_ = spec_file_;
+    material_ = spec_material_;
+    vert_ = spec_vert_;
+    texcoord_ = spec_texcoord_;
+    face_ = spec_face_;
+    bodyname_ = spec_bodyname_;
+    bindpos_ = spec_bindpos_;
+    bindquat_ = spec_bindquat_;
+    vertid_ = spec_vertid_;
+    vertweight_ = spec_vertweight_;
+
+    // use filename if name is missing
+    if (name.empty()) {
+        std::string stripped = mjuu_strippath(file_);
+        name = mjuu_stripext(stripped);
+    }
+}
+
+void mjCSkin::PrepareSKN() {
   // load file
   if (!file_.empty()) {
       // make sure data is not present
@@ -3201,7 +3209,7 @@ void mjCSkin::ResolveReferences(const mjCModel* m) {
   size_t nbone = bodyname_.size();
   bodyid.resize(nbone);
   for (auto& name : bodyname_) {
-      printf("bodyname %s ", name.c_str());
+      printf("ref bodyname %s ", name.c_str());
       name = m->prefix + name + m->suffix;
       printf("updated to %s... ", name.c_str());
   }
